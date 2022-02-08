@@ -118,11 +118,6 @@ def getStatments():
 
 @app.route('/account/statment/period')
 def getStatmentByPeriod():
-    '''
-    datet = '8/2/2022'
-    print (datetime.strptime(datet, '%d/%m/%Y'))
-    return {"message": "Done!"}
-'''
     allStatmentsById = Transaction.query.filter(and_(Transaction.accountId==request.json['accountId'], Transaction.transactionDate.between(datetime.strptime(request.json['from'], '%d/%m/%Y'), datetime.strptime(request.json['to'], '%d/%m/%Y'))))
     
     output = []
