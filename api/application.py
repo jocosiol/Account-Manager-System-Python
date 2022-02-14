@@ -25,8 +25,8 @@ class Person(db.Model):
 
 class Account(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    balance = db.Column(db.Float, default=0, nullable=False)
-    dailyWithdrawLimit = db.Column(db.Float, nullable=False)
+    balance = db.Column(db.Integer, default=0, nullable=False)
+    dailyWithdrawLimit = db.Column(db.Integer, nullable=False)
     activeFlag = db.Column(db.Boolean, default=True, nullable=False)
     accountType = db.Column(db.Integer, nullable=False)
     createdDate = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -39,7 +39,7 @@ class Account(db.Model):
 
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.Float, nullable=False)
+    value = db.Column(db.Integer, nullable=False)
     transactionDate = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     accountId = db.Column(db.Integer, db.ForeignKey('account.id'), nullable=False)
@@ -59,6 +59,19 @@ def getAccounts():
         accountData = {"id": account.id, "balance": account.balance, "dailyWithdrawLimit": account.dailyWithdrawLimit, "activeFlag": account.activeFlag, "accountType": account.accountType, "createdDate": account.createdDate, "personId": account.personId}
         output.append(accountData)
     return {"accounts": output}
+
+@app.route('/account/transactions')
+def getTransactions():
+    allTransactionById = db.session.query(Transaction).\
+        filter(Transaction.accountId==request.json['accountId']).\
+        filter(Transaction.value<0).\
+        filter(Transaction.transactionDate>=datetime.today().date())
+
+    output = []
+    for transactionById in allTransactionById:
+        transactionById = {"id": transactionById.id, "value": transactionById.value, "transactionDate": transactionById.transactionDate, "accountId": transactionById.accountId}
+        output.append(transactionById)
+    return {"accounts": output, "date": datetime.today().date()}
 
 @app.route('/account/create', methods=['POST'])
 def createNewAccount():
@@ -114,9 +127,13 @@ def withdraw():
         return Response('The account is currently blocked.', mimetype='application/json', status=402)
     if request.json['value'] <= 0:
         return Response('The amount has to be greater that 0.', mimetype='application/json', status=403)
-    todayStatmentsById = Transaction.query.filter(func.sum(and_(Transaction.accountId==request.json['accountId'], Transaction.transactionDate==datetime.now())))
-    
-    print (todayStatmentsById)
+    todayStatmentsById = db.session.query(func.sum(Transaction.value)).\
+        filter(Transaction.accountId==request.json['accountId']).\
+        filter(Transaction.value<0).\
+        filter(Transaction.transactionDate>=datetime.today().date()).first()
+    if todayStatmentsById[0] is not None:
+        if (accountById.dailyWithdrawLimit <= abs(todayStatmentsById[0])):
+            return Response('The daily widthraw limit has been reach.', mimetype='application/json', status=405)
 
     newTransaction = Transaction(value=-abs(request.json['value']), accountId=request.json['accountId'])
     db.session.add(newTransaction)

@@ -1,0 +1,11 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "database": "${workspaceFolder:Account-Manager-System}/api/data.db",
+      "name": "AMS_DB"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
+}
