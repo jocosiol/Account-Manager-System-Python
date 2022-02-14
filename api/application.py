@@ -147,6 +147,14 @@ def withdraw():
 @app.route('/account/block', methods=['PUT'])
 def block():
     accountById = Account.query.filter_by(id=request.json['accountId']).first()
+
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=402)
+
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
     accountById.activeFlag = False
     db.session.commit()
 
@@ -154,6 +162,14 @@ def block():
 
 @app.route('/account/statment')
 def getStatments():
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
+
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=402)
+
     allStatmentsById = Transaction.query.filter_by(accountId=request.json['accountId'])
 
     output = []
@@ -164,6 +180,14 @@ def getStatments():
 
 @app.route('/account/statment/period')
 def getStatmentByPeriod():
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
+
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=402)
+        
     allStatmentsById = Transaction.query.filter(and_(Transaction.accountId==request.json['accountId'], Transaction.transactionDate.between(datetime.strptime(request.json['from'], '%d/%m/%Y'), datetime.strptime(request.json['to'], '%d/%m/%Y'))))
     
     output = []
