@@ -1,5 +1,6 @@
 from operator import and_
-from flask import Flask, request
+#from middleware import validAccountId
+from flask import Flask, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -71,11 +72,20 @@ def createNewAccount():
 
 @app.route('/account/deposit', methods=['POST'])
 def deposit():
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
+    
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=402)
+    if request.json['value'] <= 0:
+        return Response('The amount has to be greater that 0.', mimetype='application/json', status=403)
+    
     newTransaction = Transaction(value=request.json['value'],accountId=request.json['accountId'])
     db.session.add(newTransaction)
     db.session.commit()
 
-    accountById = Account.query.filter_by(id=request.json['accountId']).first()
     accountById.balance += request.json['value']
     db.session.commit()
 
@@ -83,16 +93,35 @@ def deposit():
 
 @app.route('/account/balance')
 def getBalance():
-    balanceById = Account.query.filter_by(id=request.json['accountId']).first()
-    return {"balance": balanceById.balance}
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
+
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=401)
+
+    return {"balance": accountById.balance}
 
 @app.route('/account/withdraw', methods=['POST'])
 def withdraw():
+    accountById = Account.query.filter_by(id=request.json['accountId']).first()
+
+    # Wanabe Middleware
+    if accountById is None:
+        return Response('The account does not exist.', mimetype='application/json', status=401)
+    if accountById.activeFlag == False:
+        return Response('The account is currently blocked.', mimetype='application/json', status=402)
+    if request.json['value'] <= 0:
+        return Response('The amount has to be greater that 0.', mimetype='application/json', status=403)
+    todayStatmentsById = Transaction.query.filter(func.sum(and_(Transaction.accountId==request.json['accountId'], Transaction.transactionDate==datetime.now())))
+    
+    print (todayStatmentsById)
+
     newTransaction = Transaction(value=-abs(request.json['value']), accountId=request.json['accountId'])
     db.session.add(newTransaction)
     db.session.commit()
 
-    accountById = Account.query.filter_by(id=request.json['accountId']).first()
     accountById.balance -= request.json['value']
     db.session.commit()
 
