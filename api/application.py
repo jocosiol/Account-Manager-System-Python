@@ -75,6 +75,14 @@ def getTransactions():
 
 @app.route('/account/create', methods=['POST'])
 def createNewAccount():
+    try:
+        dailyWithdrawLimit = int(request.json['dailyWithdrawLimit'])
+    except:
+        return Response('Bad input. dailyWithdrawLimit needs to be a integer number.', mimetype='application/json', status=406)
+    try:
+        accountType = int(request.json['accountType'])
+    except:
+        return Response('Bad input. accountType needs to be a integer number.', mimetype='application/json', status=407)
     newPerson = Person(name=request.json['name'], document=request.json['document'])
     db.session.add(newPerson)
     db.session.commit()
@@ -85,6 +93,11 @@ def createNewAccount():
 
 @app.route('/account/deposit', methods=['POST'])
 def deposit():
+    try:
+        value = int(request.json['value'])
+    except:
+        return Response('Bad input. value needs to be a integer number.', mimetype='application/json', status=408)
+
     accountById = Account.query.filter_by(id=request.json['accountId']).first()
     
     # Wanabe Middleware
@@ -118,6 +131,11 @@ def getBalance():
 
 @app.route('/account/withdraw', methods=['POST'])
 def withdraw():
+    try:
+        value = int(request.json['value'])
+    except:
+        return Response('Bad input. value needs to be a integer number.', mimetype='application/json', status=408)
+
     accountById = Account.query.filter_by(id=request.json['accountId']).first()
 
     # Wanabe Middleware
@@ -187,7 +205,7 @@ def getStatmentByPeriod():
         return Response('The account does not exist.', mimetype='application/json', status=401)
     if accountById.activeFlag == False:
         return Response('The account is currently blocked.', mimetype='application/json', status=402)
-        
+
     allStatmentsById = Transaction.query.filter(and_(Transaction.accountId==request.json['accountId'], Transaction.transactionDate.between(datetime.strptime(request.json['from'], '%d/%m/%Y'), datetime.strptime(request.json['to'], '%d/%m/%Y'))))
     
     output = []
